@@ -6,6 +6,14 @@ import toast from 'react-hot-toast';
 import styles from './SubmissionForm.module.css';
 import TermsModal from './TermsModal';
 
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = (error) => reject(error);
+  });
+
 const SubmissionForm = () => {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -37,26 +45,32 @@ const SubmissionForm = () => {
     const toastId = toast.loading('Submitting your artwork...');
 
     try {
-      const formData = new FormData();
-      formData.append('image', image);
-      const imgbbApiKey = '3c4e681b2f5c0d00e228a0d02ef74def';
+      const base64Image = await fileToBase64(image);
 
-      const imgbbRes = await axios.post(
-        `https://api.imgbb.com/1/upload?key=${imgbbApiKey}`,
+      const formData = new FormData();
+      const freeimageApiKey = '6d207e02198a847aa98d0a2a901485a5';
+      formData.append('key', freeimageApiKey);
+      formData.append('action', 'upload');
+      formData.append('source', base64Image);
+
+      const freeimageRes = await axios.post(
+        'https://freeimage.host/api/1/upload',
         formData
       );
 
-      const imageUrl = imgbbRes.data.data.url;
-      const deleteUrl = imgbbRes.data.data.delete_url;
+      if (freeimageRes.data.status_code !== 200) {
+        throw new Error(freeimageRes.data.error?.message || 'Image upload failed');
+      }
+
+      const imageUrl = freeimageRes.data.image.url;
 
       await addDoc(collection(db, 'submissions'), {
         name,
         age: parseInt(age),
         phone,
         imageUrl,
-        deleteUrl,
         submittedAt: new Date(),
-        imgbbResponse: imgbbRes.data.data,
+        freeimageResponse: freeimageRes.data.image,
       });
 
       toast.success('Artwork submitted successfully! All the best!', { id: toastId });

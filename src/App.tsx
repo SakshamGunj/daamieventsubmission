@@ -6,7 +6,7 @@ function App() {
     <div className="app-container">
       <Toaster position="top-center" reverseOrder={false} />
       <SubmissionForm />
-    </div>
+      </div>
   );
 }
 
