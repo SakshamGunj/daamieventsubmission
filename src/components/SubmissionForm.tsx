@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import axios from 'axios';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import toast from 'react-hot-toast';
