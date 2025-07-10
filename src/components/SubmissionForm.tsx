@@ -6,71 +6,35 @@ import toast from 'react-hot-toast';
 import styles from './SubmissionForm.module.css';
 import TermsModal from './TermsModal';
 
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve((reader.result as string).split(',')[1]);
-    reader.onerror = (error) => reject(error);
-  });
-
 const SubmissionForm = () => {
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
   const [phone, setPhone] = useState('');
-  const [image, setImage] = useState<File | null>(null);
+  const [artworkLink, setArtworkLink] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setImage(e.target.files[0]);
-    }
-  };
-
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !age || !phone || !image) {
-      toast.error('Please fill out all fields and select an image.');
+    if (!name || !age || !phone || !artworkLink) {
+      toast.error('Please fill out all fields.');
       return;
     }
     setIsTermsModalOpen(true);
   };
 
   const handleFinalSubmit = async () => {
-    if (!image) return;
-
     setIsSubmitting(true);
     const toastId = toast.loading('Submitting your artwork...');
 
     try {
-      const base64Image = await fileToBase64(image);
-
-      const formData = new FormData();
-      const freeimageApiKey = '6d207e02198a847aa98d0a2a901485a5';
-      formData.append('key', freeimageApiKey);
-      formData.append('action', 'upload');
-      formData.append('source', base64Image);
-
-      const freeimageRes = await axios.post(
-        'https://freeimage.host/api/1/upload',
-        formData
-      );
-
-      if (freeimageRes.data.status_code !== 200) {
-        throw new Error(freeimageRes.data.error?.message || 'Image upload failed');
-      }
-
-      const imageUrl = freeimageRes.data.image.url;
-
       await addDoc(collection(db, 'submissions'), {
         name,
         age: parseInt(age),
         phone,
-        imageUrl,
+        artworkLink,
         submittedAt: new Date(),
-        freeimageResponse: freeimageRes.data.image,
       });
 
       toast.success('Artwork submitted successfully! All the best!', { id: toastId });
@@ -89,10 +53,8 @@ const SubmissionForm = () => {
     setName('');
     setAge('');
     setPhone('');
-    setImage(null);
+    setArtworkLink('');
     setIsSubmitted(false);
-    const fileInput = document.getElementById('file-upload') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
   };
 
   if (isSubmitted) {
@@ -115,7 +77,7 @@ const SubmissionForm = () => {
         <div className={styles.header}>
           <h1 className={styles.title}>DAAMIEVENT Presents</h1>
           <h2 className={styles.subtitle}>Sikkim Creative Star Art Competition</h2>
-          <p className={styles.description}>Submit your artwork below. All the best!</p>
+          <p className={styles.description}>Submit your artwork link below. All the best!</p>
         </div>
 
         <form onSubmit={handleFormSubmit} className={styles.form}>
@@ -147,24 +109,19 @@ const SubmissionForm = () => {
           />
           
           <div>
-              <label htmlFor="file-upload" className={styles['file-upload-label']}>
-                  Upload your Artwork
-              </label>
-              <label htmlFor="file-upload" className={styles['file-drop-zone']}>
-                  <div className={styles['file-drop-content']}>
-                      <svg className={styles['file-icon']} stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <div className={styles['file-text']}>
-                          <span className={styles['upload-button']}>Upload a file</span> or drag and drop
-                      </div>
-                      <p className={styles['file-format-info']}>PNG, JPG, GIF up to 32MB</p>
-                      {image && <p className={styles['file-info']}>{image.name}</p>}
-                  </div>
-                  <input id="file-upload" name="file-upload" type="file" className={styles['sr-only']} onChange={handleFileChange} accept="image/*" />
-              </label>
+            <label htmlFor="artwork-link" className={styles['file-upload-label']}>
+                Artwork Link
+            </label>
+            <input
+              id="artwork-link"
+              type="text"
+              placeholder="Paste your artwork link here"
+              value={artworkLink}
+              onChange={(e) => setArtworkLink(e.target.value)}
+              className={styles.input}
+              required
+            />
           </div>
-
 
           <button
             type="submit"
